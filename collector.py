@@ -10,7 +10,10 @@ intents = discord.Intents.default()
 intents.members = True
 intents.messages = True
 client = commands.Bot(command_prefix='>', help_command=None, intents=intents)
-current_guild = 691661291785551873
+if (len(s.argv) != 3):
+        print("Please use cmds on discord to launch bot")
+        s.exit(1)
+current_guild = int(s.argv[2])
 current_focus = int(s.argv[1])
 step = 0
 guild = None
@@ -70,7 +73,7 @@ async def on_ready():
         return
     text = [
             f":wave: Salut {member.mention} !\nBienvenue sur le discord d'EPITECH Lille !\nJ'aurai besoin que tu me donnes ton prénom et nom de famille :smiley:",
-            ":upside_down: Pourrais-tu nous indiquer, les étude(s) et spécialité(s) et le lycéen dans lesquelles tu te situe actuellement ?",
+            ":upside_down: Pourrais-tu nous indiquer, les étude(s)/spécialité(s) et le lycée dans lesquelles tu te situe actuellement ?",
             "Merci pour ces informations. :+1:\n:information_source: Sophie Epitech ou Fabienne Lély va prochainement te contacter !\n:grey_question: N'hésites pas à nous poser des questions dans le salon question du discord !\nNote: Tes informations ne seront divulguées à personnes d'autre que l'administration d'EPITECH Lille, sois-en sûr !\n"
            ]
     await send_a_message(text[step])

@@ -262,7 +262,7 @@ async def _send(ctx, role : str, message : str):
 @client.command(name="setwelcome")
 async def _setWelcome(ctx, channel : int):
     print("{0} used setwelcome".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976):
+    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
         welcome_channel = channel
         with open("welcome.txt", "w") as f:
             f.write(str(channel))
@@ -270,6 +270,24 @@ async def _setWelcome(ctx, channel : int):
         msg = { "Your demand has been processed !" : f"Welcome messages will now be sent to {str(client.get_channel(welcome_channel))} !"}
         await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
         
+@client.command(name="help")
+async def _help(ctx):
+    print("{0} used help command".format(ctx.message.author))
+    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
+        cmds = {
+            "General commands :" :  
+                                        ">help : Display this help\n"+
+                                        ">export <role> : Export users of specific role\n",
+            "User management :" :
+                                        ">info <@member|memberID> : Show informations about specified member\n"+
+                                        ">switchall <@role1> <@role2> : Switch all users from role1 to role2\n",
+            "Server management :" :
+                                        ">setwelcome <channelId> : Set welcome annoucements to specific channel id\n"
+          }#🚧
+        await ctx.message.author.send(embed=make_embed(title="Here list of commands :", nb_field=len(cmds), fields=cmds, inline=False))
+    else:
+        msg = { "An error occured :" : "You don't have permission to do that !"}
+        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
 
 def read_token():
     with open("token.txt", "r") as f:

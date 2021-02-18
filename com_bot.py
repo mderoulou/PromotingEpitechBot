@@ -28,6 +28,22 @@ welcome_text = ["**➡️** On souhaite la bienvenue à {0} sur le discord d'Epi
                 "**➡️** Bonne nouvelle ! {0} est arrivé à destination ! :gift:",
                 "**➡️** {0} \* boup bip bou \* Bienvenue ! :robot:",
                 "**➡️** Toi tu vis, toi tu vis, toi tu arrives ! Bienvenue {0} ! :luggage:"]
+def readConfig():
+    config = {}
+    con = create_con()
+    try:
+        with con.cursor() as c:
+            c.execute("SELECT * FROM EpiCom.config;")
+            res = c.fetchall()
+        for x in res:
+            config[str(x[0])] = {"welcome" : x[1], "adm" : x[2], "prefix" : x[3], "contacts" : x[4]}
+    except:
+        raise ValueError("Unable to read config!")
+    finally:
+        con.close()
+    return (config)
+config = readConfig()
+print(config["691661291785551873"]["welcome"])
 
 def make_embed(title="", description="", nb_field=0, fields={}, inline=False, color=3):
     colors = [0xbd0f0f, 0x3700ff, 0x0ab007, 0x640066] # Red / Info / Green / others
@@ -64,7 +80,7 @@ async def on_member_join(member):
             c.execute("SELECT uid FROM EpiCom.members WHERE (uid = %s);", member.id)
             if (c.fetchone() == None):
                 print(f"Collecting data for : {member} ({member.id})")
-                subprocess.Popen(["python3", "collector.py", str(member.id)], shell=False)
+                subprocess.Popen(["python3", "collector.py", str(member.id), str(member.guild.id)], shell=False)
             c.execute("SELECT nb_join FROM EpiCom.stats WHERE (month = %s);", dstr)
             res = c.fetchone()
             if (res == None):
@@ -259,7 +275,26 @@ async def _send(ctx, role : str, message : str):
         msg = { "An error occured :" : "You don't have permission to do that !"}
         await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
 
+@client.command(name="register")
+async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, prefix_dm: str, contacts: str):
+    print("{0} use register command !".format(ctx.message.author))
+    if (ctx.message.author.id == 277461601643134976):
+        con = create_con()
+        try:
+            with con.cursor() as c:
+                c.execute("INSERT INTO EpiCom.config (guild_id, welcome_id, adm_role, prefix_dm, contacts) VALUES (%s, %s, %s, %s, %s);", (guild_id, welcome_id, adm_role, prefix_dm, contacts))
+            con.commit()
+            msg = { "Your demand has been processed !" : f"New guild is registered {str(guild_id)} !"}
+            await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
+        except:
+            msg = { "An error occured :" : "Unable to register this !"}
+            await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+    else:
+        msg = { "An error occured :" : "You don't have permission to do that !"}
+        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+
 @client.command(name="setwelcome")
+@commands.guild_only()
 async def _setWelcome(ctx, channel : int):
     print("{0} used setwelcome".format(ctx.message.author))
     if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
@@ -269,15 +304,35 @@ async def _setWelcome(ctx, channel : int):
         print(client.get_channel(welcome_channel))
         msg = { "Your demand has been processed !" : f"Welcome messages will now be sent to {str(client.get_channel(welcome_channel))} !"}
         await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
-        
+
+@client.command(name="helpop")
+async def _helpOp(ctx):
+    print("{0} used helpop command".format(ctx.message.author))
+    if (ctx.message.author.id == 277461601643134976):
+        cmds = {
+            "Collectors commands :" :  
+                                        ">help : Display this help\n"+
+                                        ">collect <userId> : Collect informations about user Id | Guild Only\n"+
+                                        ">collectors : Show all collectors\n"+
+                                        ">kill <cId> : Kill process id cId\n",
+            "Server management :" :
+                                        ">register <guildId> <welcomeId> <admRole> <prefixDm> <contacts> : Register new discord\n"
+          }#🚧
+        await ctx.message.author.send(embed=make_embed(title="Here list of commands :", nb_field=len(cmds), fields=cmds, inline=False))
+    else:
+        msg = { "An error occured :" : "You don't have permission to do that !"}
+        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+   
 @client.command(name="help")
+@commands.guild_only()
 async def _help(ctx):
     print("{0} used help command".format(ctx.message.author))
     if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
         cmds = {
             "General commands :" :  
                                         ">help : Display this help\n"+
-                                        ">export <role> : Export users of specific role\n",
+                                        ">export <role> : Export users of specific role\n"+
+                                        ">send <role> <message> : Send a message to all users in this role\n",
             "User management :" :
                                         ">info <@member|memberID> : Show informations about specified member\n"+
                                         ">switchall <@role1> <@role2> : Switch all users from role1 to role2\n",

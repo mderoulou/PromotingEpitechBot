@@ -63,7 +63,7 @@ def make_embed(title="", description="", nb_field=0, fields={}, inline=False, co
 async def SecurityCheck(message, staff=True):
     print("{0} ({1}) used {2} command !".format(message.author, message.author.id, message.content.split(" ")[0][1:]))
     if (staff):
-        if (message.author.id == 277461601643134976 or config[message.guild.id]["adm"] in [z.name.lower() for z in message.author.roles]):
+        if (message.author.id == 277461601643134976 or config[str(message.guild.id)]["adm"] in [z.name.lower() for z in message.author.roles]):
             return (True)
         else:
             msg = { "An error occured :" : "You don't have permission to do that !"}

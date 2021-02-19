@@ -254,7 +254,7 @@ async def _send(ctx, role : str, message : str):
         async for x in ctx.message.guild.fetch_members(limit=None):
             if (role.lower() in [y.name.lower() for y in x.roles]):
                 try:
-                    await x.send(message)
+                    await x.send(config[str(ctx.message.guild.id)]["prefix"].format(x.mention) + "\n" + message)
                     sended += 1
                 except:
                     pass
@@ -264,12 +264,14 @@ async def _send(ctx, role : str, message : str):
 @client.command(name="register")
 async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, prefix_dm: str, contacts: str):
     if (await SecurityCheck(ctx.message, False)):
+        global config
         con = create_con()
         try:
             with con.cursor() as c:
                 c.execute("INSERT INTO EpiCom.config (guild_id, welcome_id, adm_role, prefix_dm, contacts) VALUES (%s, %s, %s, %s, %s);", (guild_id, welcome_id, adm_role, prefix_dm, contacts))
             con.commit()
             msg = { "Your demand has been processed !" : f"New guild is registered {str(guild_id)} !"}
+            config = ReadConfig()
             await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
         except:
             msg = { "An error occured :" : "Unable to register this !"}

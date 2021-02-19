@@ -284,7 +284,7 @@ async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, pr
 @commands.guild_only()
 async def _setWelcome(ctx, channel : int):
     if (await SecurityCheck(ctx.message, True)):
-        config[ctx.message.guild.id]["welcome"] = channel
+        config[str(ctx.message.guild.id)]["welcome"] = channel
         con = create_con()
         try:
             with con.cursor() as c:

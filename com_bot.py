@@ -26,6 +26,7 @@ welcome_text = ["**➡️** On souhaite la bienvenue à {0} sur le discord d'Epi
                 "**➡️** Bonne nouvelle ! {0} est arrivé à destination ! :gift:",
                 "**➡️** {0} \* boup bip bou \* Bienvenue ! :robot:",
                 "**➡️** Toi tu vis, toi tu vis, toi tu arrives ! Bienvenue {0} ! :luggage:"]
+
 def readConfig():
     config = {}
     con = create_con()
@@ -34,7 +35,7 @@ def readConfig():
             c.execute("SELECT * FROM EpiCom.config;")
             res = c.fetchall()
         for x in res:
-            config[str(x[0])] = {"welcome" : x[1], "adm" : x[2], "prefix" : x[3], "contacts" : x[4]}
+            config[str(x[0])] = {"welcome" : x[1], "adm" : x[2], "prefix" : x[3], "contacts" : x[4], "title" : x[5]}
     except:
         raise ValueError("Unable to read config!")
     finally:
@@ -48,7 +49,7 @@ def make_embed(title="", description="", nb_field=0, fields={}, inline=False, co
     if (nb_field):
         for x in fields:
             embed.add_field(name=x, value=fields[x], inline=inline)
-    embed.set_footer(text="Dewey bot, by Maxime D.", icon_url="https://cdn.discordapp.com/icons/691661291785551873/f5fd1028da30dc55eb06ea77f6dbf222.png?size=128")
+    embed.set_footer(text="Dewey bot, by Maxime D.", icon_url="https://i.ibb.co/fDNsWvF/marker-2x.png")
     if (color == 0):
         url = "https://i.ibb.co/tM7pYZr/error.png"
     elif (color == 1):
@@ -103,7 +104,7 @@ async def on_member_join(member):
             else:
                 c.execute("UPDATE EpiCom.stats SET nb_join = %s WHERE (month = %s AND guild = %s);", (res[0] + 1, dstr, member.guild.id))
                 con.commit()
-            c.execute("DELETE FROM EpiCom.members WHERE (insert_date < %s )", (str(datetime.datetime.now().year-1) + "-" + str(datetime.datetime.now().month) + "-" + str(datetime.datetime.now().day)))
+            c.execute("DELETE FROM EpiCom.members WHERE (insert_date < %s )", (str(datetime.datetime.now().year-2) + "-" + str(datetime.datetime.now().month) + "-" + str(datetime.datetime.now().day)))
             con.commit()
     except:
         pass
@@ -237,7 +238,7 @@ async def _info(ctx, member):
             embed = discord.Embed(colour=discord.Colour(0x3700ff))
             embed.set_thumbnail(url=f"{member.avatar_url}")
             embed.set_author(name="Informations about :", icon_url="https://i.ibb.co/sqfPRNC/info.png")
-            embed.set_footer(text="Dewey bot, by Maxime D.", icon_url="https://cdn.discordapp.com/icons/691661291785551873/f5fd1028da30dc55eb06ea77f6dbf222.png?size=128")
+            embed.set_footer(text="Dewey bot, by Maxime D.", icon_url="https://i.ibb.co/fDNsWvF/marker-2x.png")
             embed.add_field(name= (f"{member.name}#{member.discriminator}"), value=f"UID - {member.id}\nName - {res[0]}\nStudies - {res[1]}\nComment - {res[2]}\nDate join - {res[3]}\n")
             await ctx.message.author.send(embed=embed)
         except:
@@ -262,23 +263,20 @@ async def _send(ctx, role : str, message : str):
         await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
 
 @client.command(name="register")
-async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, prefix_dm: str, contacts: str):
+async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, prefix_dm: str, contacts: str, name: str):
     if (await SecurityCheck(ctx.message, False)):
         global config
         con = create_con()
         try:
             with con.cursor() as c:
-                c.execute("INSERT INTO EpiCom.config (guild_id, welcome_id, adm_role, prefix_dm, contacts) VALUES (%s, %s, %s, %s, %s);", (guild_id, welcome_id, adm_role, prefix_dm, contacts))
+                c.execute("INSERT INTO EpiCom.config (guild_id, welcome_id, adm_role, prefix_dm, contacts, title) VALUES (%s, %s, %s, %s, %s, %s);", (guild_id, welcome_id, adm_role, prefix_dm, contacts, name))
             con.commit()
-            msg = { "Your demand has been processed !" : f"New guild is registered {str(guild_id)} !"}
+            msg = { "Your demand has been processed !" : f"New guild registered {name} ({str(guild_id)}) !"}
             config = ReadConfig()
             await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
         except:
             msg = { "An error occured :" : "Unable to register this !"}
             await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
 
 @client.command(name="setwelcome")
 @commands.guild_only()
@@ -312,9 +310,41 @@ async def _stat(ctx, month: str):
                 await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
         finally:
             con.close()
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+
+@client.command(name="delete")
+@commands.guild_only()
+async def _delete(ctx, uid : int):
+    if (await SecurityCheck(ctx.message, True)):
+        con = create_con()
+        try:
+            with con.cursor() as c:
+                c.execute("DELETE FROM EpiCom.members WHERE (uid = %s);", (uid))
+            con.commit()
+            msg = { "Your demand has been processed !" : f"User id {uid} was deleted from our records!" }
+            await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
+        finally:
+            con.close()
+
+@client.command(name="edit")
+@commands.guild_only()
+async def _editUser(ctx, uid: int, category: str, data: str):
+    if (await SecurityCheck(ctx.message, True)):
+        if not (category == "fullname" or category == "studies"):
+            msg = { "An error occured :" : "Category not recognized !"}
+            await message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+            return
+        con = create_con()
+        try:
+            with con.cursor() as c:
+                if (category == "fullname"):
+                    c.execute("UPDATE EpiCom.members SET fullname = %s WHERE (uid=%s);", (data, uid))
+                else:
+                    c.execute("UPDATE EpiCom.members SET studies = %s WHERE (uid=%s);", (data, uid))
+            con.commit()
+            msg = { "Your demand has been processed !" : f"Data were updated for {uid} !" }
+            await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
+        finally:
+            con.close()
 
 @client.command(name="helpop")
 async def _helpOp(ctx):
@@ -325,12 +355,9 @@ async def _helpOp(ctx):
                                         ">collectors : Show all collectors\n"+
                                         ">kill <cId> : Kill process id cId\n",
             "Server management :" :
-                                        ">register <guildId> <welcomeId> <admRole> <prefixDm> <contacts> : Register new discord\n"
+                                        ">register <guildId> <welcomeId> <admRole> <prefixDm> <contacts> <name> : Register new discord\n"
           }#🚧
         await ctx.message.author.send(embed=make_embed(title="Here list of commands :", nb_field=len(cmds), fields=cmds, inline=False))
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
    
 @client.command(name="help")
 @commands.guild_only()
@@ -345,14 +372,58 @@ async def _help(ctx):
             "User management :" :
                                         ">info <@member|memberID> : Show informations about specified member\n"+
                                         ">collect <userId> : Collect informations about user Id (Won't do anything if already collected)\n"+
-                                        ">switchall <@role1> <@role2> : Switch all users from role1 to role2\n",
+                                        ">switchall <@role1> <@role2> : Switch all users from role1 to role2\n"+
+                                        ">delete <memberId> : Delete user from record\n"+
+                                        ">edit <uid> <fullname|studies> <data> : Update data of user's category\n",
             "Server management :" :
                                         ">setwelcome <channelId> : Set welcome annoucements to specific channel id\n"
           }#🚧
         await ctx.message.author.send(embed=make_embed(title="Here list of commands :", nb_field=len(cmds), fields=cmds, inline=False))
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+
+# RGPD
+
+@client.command(name="pdata")
+async def _pData(ctx):
+    cmds = {
+            "RGPD commands :" :  
+                                        ">pdata : Display this message\n"+
+                                        ">rgpd : Show RGPD rules\n",
+            "Data management :" :
+                                        ">me : Show informations about you\n"
+          }
+    await ctx.message.author.send(embed=make_embed(title="Here list of commands :", nb_field=len(cmds), fields=cmds, inline=False))
+
+@client.command(name="rgpd")
+async def _rpgd(ctx):
+    text = """Les informations recueillies via ce robot sont enregistrées dans une base de donnée. En rejoignant ce serveur ou en intéragissant avec ce robot,
+tu acceptes que ces données soient utilisées afin de cibler la communication d'Epitech, d'effectuer des études statistiques et améliorer les services que le robot propose.
+Les données collectées seront communiquées exclusivements aux membres de l'administration d'Epitech et au développeur du robot. Elles seront conservées pendant 24 mois. 
+Tu peux accéder aux données te concernant, les rectifier, demander leur effacement ou exercer ton droit à la limitation du traitement de tes données.
+La liste des commandes relatives aux données personnelles sont disponibles via la commande '>pdata', ces commandes ne feront pas l'objet de traitement.
+Pour effectuer une demande de suppression ou des modification sur tes données, il te suffit de contacter le responsable de communication du serveur.
+Si tu as moins de 16 ans, tu certifies que tu as l'accord de tes parents pour donner ces informations."""
+    await ctx.message.author.send("```" + text + "```")
+
+@client.command("me")
+async def _me(ctx):
+    con = create_con()
+    try:
+        with con.cursor() as c:
+            c.execute("SELECT fullname,studies,comment,insert_date FROM EpiCom.members WHERE (uid = %s);", (str(ctx.message.author.id)))
+            res = c.fetchone()
+        if (res == None):
+            raise ValueError("Lol")
+        embed = discord.Embed(colour=discord.Colour(0x3700ff))
+        embed.set_thumbnail(url=f"{ctx.message.author.avatar_url}")
+        embed.set_author(name="Informations about :", icon_url="https://i.ibb.co/sqfPRNC/info.png")
+        embed.set_footer(text="Dewey bot, by Maxime D.", icon_url="https://i.ibb.co/fDNsWvF/marker-2x.png")
+        embed.add_field(name= (f"{ctx.message.author.name}#{ctx.message.author.discriminator}"), value=f"UID - {ctx.message.author.id}\nName - {res[0]}\nStudies - {res[1]}\nComment - {res[2]}\nDate join - {res[3]}\n")
+        await ctx.message.author.send(embed=embed)
+    except:
+        msg = { "An error occured :" : "We didn't find any data about you!"}
+        await ctx.message.author.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+    finally:
+        con.close()
 
 def read_token():
     with open("token.txt", "r") as f:

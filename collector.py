@@ -10,7 +10,6 @@ intents = discord.Intents.default()
 intents.members = True
 intents.messages = True
 client = commands.Bot(command_prefix='>', help_command=None, intents=intents)
-print(s.argv)
 if (len(s.argv) != 3):
         print("Please use cmds on discord to launch bot")
         s.exit(1)
@@ -30,7 +29,7 @@ def readConfig():
             c.execute("SELECT * FROM EpiCom.config;")
             res = c.fetchall()
         for x in res:
-            config[str(x[0])] = {"welcome" : x[1], "adm" : x[2], "prefix" : x[3], "contacts" : x[4]}
+            config[str(x[0])] = {"welcome" : x[1], "adm" : x[2], "prefix" : x[3], "contacts" : x[4], "title" : x[5]}
     except:
         raise ValueError("Unable to read config!")
     finally:
@@ -88,17 +87,16 @@ async def on_ready():
     if (step == 2):
         await close_bot()
         return
-    text = [
-            f":wave: Salut {member.mention} !\nBienvenue sur le discord d'EPITECH Lille !\nJ'aurai besoin que tu me donnes ton prénom et nom de famille :smiley:",
+    text = [ f":wave: Salut {member.mention} !\nBienvenue sur le discord {config[str(current_guild)]['title']} !\nJ'aurai besoin que tu me donnes ton prénom et nom de famille :smiley:\nEn poursuivant les intéractions avec le robot ou la navigation sur le serveur discord {config[str(current_guild)]['title']} tu acceptes notre RGPD.\n:point_right: Pour consulter notre RGPD tape '>rgpd'\n",
             ":upside_down: Pourrais-tu nous indiquer, les étude(s)/spécialité(s) et le lycée dans lesquelles tu te situe actuellement ?",
-            "Merci pour ces informations. :+1:\n:information_source: " + config[str(current_guild)]["contacts"] + " va prochainement te contacter !\n:grey_question: N'hésites pas à nous poser des questions dans le salon question du discord !\nNote: Tes informations ne seront divulguées à personnes d'autre que l'administration d'EPITECH Lille, sois-en sûr !\n"
+            f"Merci pour ces informations. :+1:\n:information_source: {config[str(current_guild)]['contacts']} va prochainement te contacter !\n:grey_question: N'hésites pas à nous poser des questions dans le salon question du discord !\nNote: Pour obtenir la liste des commandes en relation avec la protection de la vie privée tape la commande '>pdata' !\n"
            ]
     await send_a_message(text[step])
 
 @client.event
 async def on_message(message):
     global step
-    if (message.author == client.user or message.author.id != member.id or message.guild != None):
+    if (message.author == client.user or message.author.id != member.id or message.guild != None or message.content[:1] == ">"):
         return
     if (message.content == "close"):
         await message.author.send("Um you're a member of EPITECH family, okay ...")

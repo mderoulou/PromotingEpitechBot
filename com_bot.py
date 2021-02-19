@@ -43,7 +43,6 @@ def readConfig():
         con.close()
     return (config)
 config = readConfig()
-print(config["691661291785551873"]["welcome"])
 
 def make_embed(title="", description="", nb_field=0, fields={}, inline=False, color=3):
     colors = [0xbd0f0f, 0x3700ff, 0x0ab007, 0x640066] # Red / Info / Green / others
@@ -72,7 +71,7 @@ async def on_ready():
 async def on_member_join(member):
     d = datetime.datetime.today()
     dstr = "{:02d}".format(d.month) + "-" + str(d.year)
-    channel = client.get_channel(welcome_channel)
+    channel = client.get_channel(config[str(member.guild.id)]["welcome"])
     await channel.send(random.choice(welcome_text).format(member.mention))
     try:
         con = create_con()
@@ -81,13 +80,13 @@ async def on_member_join(member):
             if (c.fetchone() == None):
                 print(f"Collecting data for : {member} ({member.id})")
                 subprocess.Popen(["python3", "collector.py", str(member.id), str(member.guild.id)], shell=False)
-            c.execute("SELECT nb_join FROM EpiCom.stats WHERE (month = %s);", dstr)
+            c.execute("SELECT nb_join FROM EpiCom.stats WHERE (month = % AND guild = %s);", (dstr, member.guild.id))
             res = c.fetchone()
             if (res == None):
-                c.execute("INSERT INTO EpiCom.stats (month, nb_join) VALUES (%s, %s);", (dstr, 1))
+                c.execute("INSERT INTO EpiCom.stats (month, nb_join, guild) VALUES (%s, %s, %s);", (dstr, 1, member.guild.id))
                 con.commit()
             else:
-                c.execute("UPDATE EpiCom.stats SET nb_join = %s WHERE (month = %s);", (res[0] + 1, dstr))
+                c.execute("UPDATE EpiCom.stats SET nb_join = %s WHERE (month = %s AND guild = %s);", (res[0] + 1, dstr, member.guild.id))
                 con.commit()
             c.execute("DELETE FROM EpiCom.members WHERE (insert_date < %s )", (str(datetime.datetime.now().year-1) + "-" + str(datetime.datetime.now().month) + "-" + str(datetime.datetime.now().day)))
             con.commit()
@@ -298,11 +297,15 @@ async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, pr
 async def _setWelcome(ctx, channel : int):
     print("{0} used setwelcome".format(ctx.message.author))
     if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
-        welcome_channel = channel
-        with open("welcome.txt", "w") as f:
-            f.write(str(channel))
-        print(client.get_channel(welcome_channel))
-        msg = { "Your demand has been processed !" : f"Welcome messages will now be sent to {str(client.get_channel(welcome_channel))} !"}
+        config[ctx.message.guild.id]["welcome"] = channel
+        con = create_con()
+        try:
+            with con.cursor() as c:
+                c.execute("UPDATE EpiCom.config SET welcome_id = %s WHERE (guild_id = %s);", (channel, ctx.message.guild.id))
+            con.commit()
+        finally:
+            con.close()
+        msg = { "Your demand has been processed !" : f"Welcome messages will now be sent to {str(client.get_channel(channel))} !"}
         await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
 
 @client.command(name="helpop")

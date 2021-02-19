@@ -179,7 +179,7 @@ async def _collect(ctx, id: int):
         else:
             msg = { "Your demand is processing ..." : f"Start collecting data of {target.display_name}."}
             await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
-            subprocess.Popen(["python3", "collector.py", str(target.id)], shell=False)
+            subprocess.Popen(["python3", "collector.py", str(target.id), str(ctx.message.guild.id)], shell=False)
 
 @client.command(name='collectors')
 async def _collectors(ctx):

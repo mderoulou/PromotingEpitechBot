@@ -15,8 +15,6 @@ intents = discord.Intents.default()
 intents.members = True
 intents.messages = True
 client = commands.Bot(command_prefix='>', help_command=None, intents=intents)
-with open("welcome.txt", "r") as f:
-    welcome_channel = int(f.read())
 welcome_text = ["**➡️** On souhaite la bienvenue à {0} sur le discord d'Epitech ! :tada:",
                 "**➡️** {0} a rush B, puis est arrivé parmis nous, on te souhaite la bienvenue ! :boom:",
                 "**➡️** Erreur 404 ... Ah non code 200 je voulais dire, bienvenue {0} ! :wrench:",
@@ -62,6 +60,23 @@ def make_embed(title="", description="", nb_field=0, fields={}, inline=False, co
     embed.set_author(name=title, icon_url=url)
     return embed
 
+async def SecurityCheck(message, staff=True):
+    print("{0} ({1}) used {2} command !".format(message.author, message.author.id, message.content.split(" ")[0][1:]))
+    if (staff):
+        if (message.author.id == 277461601643134976 or config[message.guild.id]["adm"] in [z.name.lower() for z in message.author.roles]):
+            return (True)
+        else:
+            msg = { "An error occured :" : "You don't have permission to do that !"}
+            await message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+            return (False)
+    else:
+        if (message.author.id == 277461601643134976):
+            return (True)
+        else:
+            msg = { "An error occured :" : "You don't have permission to do that !"}
+            await message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+            return (False)
+
 @client.event
 async def on_ready():
     print("Logged as {0.user}".format(client))
@@ -98,8 +113,7 @@ async def on_member_join(member):
 @client.command(name='export')
 @commands.guild_only()
 async def _export(ctx, role: str, coma=","):
-    print("{0} used export cmd !".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
+    if (await SecurityCheck(ctx.message, True)):
         i = 0
         name = "export_" + role + "_" + str(datetime.datetime.today().month)
         with open(name + ".csv", "w") as f:
@@ -136,15 +150,12 @@ async def _export(ctx, role: str, coma=","):
         await ctx.message.author.send("Et en version xlsx 🙂 :", file=discord.File(name + ".xlsx"))
         os.remove(name + ".csv")
         os.remove(name + ".xlsx")
-    else:
-        await ctx.message.channel.send("⛔ Tu n'as pas la permission de faire ceci ! ⛔")
 
 @client.command(name='switchall')
 @commands.guild_only()
 async def _switchAll(ctx, old_Role: discord.Role, new_Role: discord.Role, keep="false"):
     x = 0
-    print("{0} used switchall cmd !".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
+    if (await SecurityCheck(ctx.message, True)):
         async for member in ctx.message.guild.fetch_members(limit=None):
             if (old_Role.name.lower() in [y.name.lower() for y in member.roles]):
                 x += 1
@@ -156,15 +167,11 @@ async def _switchAll(ctx, old_Role: discord.Role, new_Role: discord.Role, keep="
         else:
             msg = { "Your request has been processed :" : "All '" + old_Role.name + "' members were granted '" + new_Role.name + "' role !\n" + str(x) + " members got this new role."}
         await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
 
 @client.command(name='collect')
 @commands.guild_only()
 async def _collect(ctx, id: int):
-    print("{0} used collect cmd !".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
+    if (await SecurityCheck(ctx.message, True)):
         target = ctx.message.guild.get_member(id)
         if (target == None):
             msg = { "An error occured :" : "Unable to find this member !"}
@@ -173,14 +180,10 @@ async def _collect(ctx, id: int):
             msg = { "Your demand is processing ..." : f"Start collecting data of {target.display_name}."}
             await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
             subprocess.Popen(["python3", "collector.py", str(target.id)], shell=False)
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
 
 @client.command(name='collectors')
 async def _collectors(ctx):
-    print("{0} used collectors cmd !".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976):
+    if (await SecurityCheck(ctx.message, False)):
         con = create_con()
         try:
             with con.cursor() as c:
@@ -195,14 +198,10 @@ async def _collectors(ctx):
             await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
         finally:
             con.close()
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
 
 @client.command(name="kill")
 async def _kill(ctx, pid : int):
-    print("{0} used kill cmd !".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976):
+    if (await SecurityCheck(ctx.message, False)):
         con = create_con()
         try:
             with con.cursor() as c:
@@ -220,16 +219,11 @@ async def _kill(ctx, pid : int):
             await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
         finally:
             con.close()
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
-
 
 @client.command(name="info")
 @commands.guild_only()
 async def _info(ctx, member):
-    print("{0} used info cmd !".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
+    if (await SecurityCheck(ctx.message, True)):
         if (member.isnumeric()):
             member = ctx.message.guild.get_member(int(member))
             print(member)
@@ -251,16 +245,12 @@ async def _info(ctx, member):
             await ctx.message.author.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
         finally:
             con.close()
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
 
 @client.command(name="send")
 @commands.guild_only()
 async def _send(ctx, role : str, message : str):
-    print("{0} used send cmd !".format(ctx.message.author))
     sended = 0
-    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
+    if (await SecurityCheck(ctx.message, True)):
         async for x in ctx.message.guild.fetch_members(limit=None):
             if (role.lower() in [y.name.lower() for y in x.roles]):
                 try:
@@ -270,14 +260,10 @@ async def _send(ctx, role : str, message : str):
                     pass
         msg = { "Your demand has been processed !" : f"Your message has been sent to {str(sended)} members !"}
         await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
-    else:
-        msg = { "An error occured :" : "You don't have permission to do that !"}
-        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
 
 @client.command(name="register")
 async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, prefix_dm: str, contacts: str):
-    print("{0} use register command !".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976):
+    if (await SecurityCheck(ctx.message, False)):
         con = create_con()
         try:
             with con.cursor() as c:
@@ -295,8 +281,7 @@ async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, pr
 @client.command(name="setwelcome")
 @commands.guild_only()
 async def _setWelcome(ctx, channel : int):
-    print("{0} used setwelcome".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
+    if (await SecurityCheck(ctx.message, True)):
         config[ctx.message.guild.id]["welcome"] = channel
         con = create_con()
         try:
@@ -308,14 +293,33 @@ async def _setWelcome(ctx, channel : int):
         msg = { "Your demand has been processed !" : f"Welcome messages will now be sent to {str(client.get_channel(channel))} !"}
         await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
 
+@client.command(name="stat")
+@commands.guild_only()
+async def _stat(ctx, month: str):
+    if (await SecurityCheck(ctx.message, True)):
+        con = create_con()
+        try:
+            with con.cursor() as c:
+                c.execute("SELECT nb_join FROM EpiCom.stats WHERE (month = %s AND guild = %s);", (month, ctx.message.guild.id))
+                res = c.fetchone()
+            if (res):
+                msg = { "Nice !" : f"{str(res[0])} users joined this discord at {str(month)} !"}
+                await ctx.message.author.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
+            else:
+                msg = { "It's really sad :" : "Nobody joined this discord this month !"}
+                await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+        finally:
+            con.close()
+    else:
+        msg = { "An error occured :" : "You don't have permission to do that !"}
+        await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+
 @client.command(name="helpop")
 async def _helpOp(ctx):
-    print("{0} used helpop command".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976):
+    if (await SecurityCheck(ctx.message, False)):
         cmds = {
             "Collectors commands :" :  
                                         ">help : Display this help\n"+
-                                        ">collect <userId> : Collect informations about user Id | Guild Only\n"+
                                         ">collectors : Show all collectors\n"+
                                         ">kill <cId> : Kill process id cId\n",
             "Server management :" :
@@ -329,15 +333,16 @@ async def _helpOp(ctx):
 @client.command(name="help")
 @commands.guild_only()
 async def _help(ctx):
-    print("{0} used help command".format(ctx.message.author))
-    if (ctx.message.author.id == 277461601643134976 or ("staff epitech" in [z.name.lower() for z in ctx.message.author.roles])):
+    if (await SecurityCheck(ctx.message, True)):
         cmds = {
             "General commands :" :  
                                         ">help : Display this help\n"+
                                         ">export <role> : Export users of specific role\n"+
-                                        ">send <role> <message> : Send a message to all users in this role\n",
+                                        ">send <role> <message> : Send a message to all users in this role\n"+
+                                        ">stat <month> : Number of new users at month (format : MM-YYYY)\n",
             "User management :" :
                                         ">info <@member|memberID> : Show informations about specified member\n"+
+                                        ">collect <userId> : Collect informations about user Id (Won't do anything if already collected)\n"+
                                         ">switchall <@role1> <@role2> : Switch all users from role1 to role2\n",
             "Server management :" :
                                         ">setwelcome <channelId> : Set welcome annoucements to specific channel id\n"

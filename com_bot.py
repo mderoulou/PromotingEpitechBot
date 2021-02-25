@@ -78,6 +78,13 @@ async def SecurityCheck(message, staff=True):
             await message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
             return (False)
 
+async def GetRole(ctx, role):
+    roles = await ctx.message.guild.fetch_roles()
+    for x in roles:
+        if (x.name.lower() == role.lower()):
+            return x
+    return None
+
 @client.event
 async def on_ready():
     print("Logged as {0.user}".format(client))
@@ -154,19 +161,42 @@ async def _export(ctx, role: str, coma=","):
 
 @client.command(name='switchall')
 @commands.guild_only()
-async def _switchAll(ctx, old_Role: discord.Role, new_Role: discord.Role, keep="false"):
+async def _switchAll(ctx, old_Role: str, new_Role: str, keep="false"):
     x = 0
     if (await SecurityCheck(ctx.message, True)):
+        oRole = await GetRole(ctx, old_Role)
+        nRole = await GetRole(ctx, new_Role)
+        if not (oRole and nRole):
+            msg = { "An error occured :" : "One of theses roles was not found !"}
+            await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+            return
         async for member in ctx.message.guild.fetch_members(limit=None):
-            if (old_Role.name.lower() in [y.name.lower() for y in member.roles]):
+            if (oRole.name.lower() in [y.name.lower() for y in member.roles]):
                 x += 1
-                await member.add_roles(new_Role)
+                await member.add_roles(nRole)
                 if (keep == "false"):
-                    await member.remove_roles(old_Role)
+                    await member.remove_roles(oRole)
         if (keep == "false"):
-            msg = { "Your request has been processed :" : "All '" + old_Role.name + "' members were moved to '" + new_Role.name + "' role !\n" + str(x) + " members were moved."}
+            msg = { "Your request has been processed :" : "All '" + oRole.name + "' members were moved to '" + nRole.name + "' role !\n" + str(x) + " members were moved."}
         else:
-            msg = { "Your request has been processed :" : "All '" + old_Role.name + "' members were granted '" + new_Role.name + "' role !\n" + str(x) + " members got this new role."}
+            msg = { "Your request has been processed :" : "All '" + oRole.name + "' members were granted '" + nRole.name + "' role !\n" + str(x) + " members got this new role."}
+        await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
+
+@client.command(name='removefrom')
+@commands.guild_only()
+async def _removeFrom(ctx, old_role: str):
+    x = 0
+    if (await SecurityCheck(ctx.message, True)):
+        oRole = await GetRole(ctx, old_role)
+        if not oRole:
+            msg = { "An error occured :" : "This role doesn't exists !"}
+            await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+            return
+        async for member in ctx.message.guild.fetch_members(limit=None):
+            if (oRole.name.lower() in [y.name.lower() for y in member.roles]):
+                x += 1
+                await member.remove_roles(oRole)
+        msg = { "Your request has been processed :" : "All '" + oRole.name + "' members were removed from this role!\n" + str(x) + " members got this new role."}
         await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
 
 @client.command(name='collect')
@@ -271,12 +301,14 @@ async def _registerGuild(ctx, guild_id : int, welcome_id: int, adm_role: str, pr
             with con.cursor() as c:
                 c.execute("INSERT INTO EpiCom.config (guild_id, welcome_id, adm_role, prefix_dm, contacts, title) VALUES (%s, %s, %s, %s, %s, %s);", (guild_id, welcome_id, adm_role, prefix_dm, contacts, name))
             con.commit()
-            msg = { "Your demand has been processed !" : f"New guild registered {name} ({str(guild_id)}) !"}
-            config = ReadConfig()
+            msg = { "Your demand has been processed !" : f"New guild registered {name} ({str(guild_id)}), a restart will be requiered !"}
+            #config = ReadConfig()
             await ctx.message.channel.send(embed=make_embed(title="Success !", nb_field=len(msg), fields=msg, inline=False, color=2))
         except:
             msg = { "An error occured :" : "Unable to register this !"}
             await ctx.message.channel.send(embed=make_embed(title="Something went wrong !", nb_field=len(msg), fields=msg, inline=False, color=0))
+        finally:
+            con.close()
 
 @client.command(name="setwelcome")
 @commands.guild_only()
@@ -372,7 +404,8 @@ async def _help(ctx):
             "User management :" :
                                         ">info <@member|memberID> : Show informations about specified member\n"+
                                         ">collect <userId> : Collect informations about user Id (Won't do anything if already collected)\n"+
-                                        ">switchall <@role1> <@role2> : Switch all users from role1 to role2\n"+
+                                        ">switchall <role1> <role2> : Switch all users from role1 to role2\n"+
+                                        ">removefrom <role> : Remove all user from role\n"+
                                         ">delete <memberId> : Delete user from record\n"+
                                         ">edit <uid> <fullname|studies> <data> : Update data of user's category\n",
             "Server management :" :
